@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <link rel="stylesheet" href="styles.css">
+    <title>Mini World with Three.js</title>
+  </head>
+  <body width='2000px' height='2000px'>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Lato&display=swap');
+    </style>
+    <canvas id="c">
+    </canvas>
+
+    <div class="main-title">
+    Three.js Mini World!
+      <br>
+      <div class="about"> 
+      Welcome to my small world! Drag and use mouse to look around at the temple and beautiful scenery.
+      </div>
+    </div>
+
+    <div class="fog-title">
+    Slide for some fog:)
+    </div>
+    <input type="range" min="25" max="150" value="150" class="slider" id="fog_On">
+
+    <div class="button-title">
+    Cameras: 
+    </div>
+    <button type="button" id="camera1">Perspective Camera</button>
+    <button type="button" id="camera2">Orthographic Camera</button>
+    
+
+
+  <!-- My scripts -->
+  <script type="module">
+      import * as THREE from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/build/three.module.js';
+      import {OrbitControls} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/controls/OrbitControls.js';
+      import {OBJLoader2} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/loaders/OBJLoader2.js';
+
+      function createSkyBox(scene, renderer, camera) {
+          var materialArray = [];
+          var texture_ft = new THREE.TextureLoader().load('images/bay_ft.jpg');
+          var texture_bk = new THREE.TextureLoader().load('images/bay_bk.jpg');
+          var texture_up = new THREE.TextureLoader().load('images/bay_up.jpg');
+          var texture_dn = new THREE.TextureLoader().load('images/bay_dn.jpg');
+          var texture_rt = new THREE.TextureLoader().load('images/bay_rt.jpg');
+          var texture_lf = new THREE.TextureLoader().load('images/bay_lf.jpg');
+
+          materialArray.push(new THREE.MeshBasicMaterial( { map: texture_ft } ));
+          materialArray.push(new THREE.MeshBasicMaterial( { map: texture_bk } ));
+          materialArray.push(new THREE.MeshBasicMaterial( { map: texture_up } ));
+          materialArray.push(new THREE.MeshBasicMaterial( { map: texture_dn } ));
+          materialArray.push(new THREE.MeshBasicMaterial( { map: texture_rt } ));
+          materialArray.push(new THREE.MeshBasicMaterial( { map: texture_lf } ));
+
+          for(let i = 0; i < 6; i++) {
+            materialArray[i].side = THREE.BackSide;
+          }
+
+          let skyboxGeo = new THREE.BoxGeometry(80, 80, 80);
+          let skybox = new THREE.Mesh(skyboxGeo, materialArray);
+          scene.add(skybox);
+
+          animate();
+
+          function animate() {
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+          }
+          
+      }
+      
+      function makeLighting(scene) {
+        var color = 0xFFFFFF;
+        var d_intensity = 2;
+        var a_intensity = 0.5;
+        var p_intensity = 0.7;
+
+        var light = new THREE.DirectionalLight(color, d_intensity);
+        var light2 = new THREE.AmbientLight(color, a_intensity);
+        var light3 = new THREE.PointLight(color, p_intensity);
+        var light4 = new THREE.PointLight(color, p_intensity);
+
+        light.position.set(1, 4, -3);
+        light3.position.set(-8, 8, 4);
+        light4.position.set(8, 8, 4);
+
+        scene.add(light4);
+        scene.add(light3);
+        scene.add(light2);
+        scene.add(light);
+      }
+
+      function makeCube(x, y, z, scene) {
+        var boxWidth = 1;
+        var boxHeight = 1;
+        var boxDepth = 1;
+        var geometry = new THREE.BoxGeometry(boxWidth, boxHeight, boxDepth);
+
+        // Load textures
+        const loader = new THREE.TextureLoader();
+        var material = new THREE.MeshPhongMaterial( { map: loader.load('images/floor.jpg'), } );
+
+        var cube = new THREE.Mesh(geometry, material);
+        scene.add(cube);
+
+        cube.position.x = x;
+        cube.position.y = y;
+        cube.position.z = z;
+
+        return cube;
+      }
+
+      function makeFloor(x, y, z, scene) {
+        var radTop = 6.0;
+        var radBot = 6.0;
+        var height = 1;
+        var radSeg = 24;
+        const geometry = new THREE.CylinderGeometry(radTop, radBot, height, radSeg);
+
+        const loader = new THREE.TextureLoader();
+        var material = new THREE.MeshPhongMaterial( { map: loader.load('images/floor.jpg'), } );
+
+        var cylinder = new THREE.Mesh(geometry, material);
+        scene.add(cylinder);
+
+        cylinder.position.x = x;
+        cylinder.position.y = y;
+        cylinder.position.z = z;
+
+        return cylinder;
+      }
+
+      function makeCeiling(x, y, z, scene) {
+        var radTop = 6.85;
+        var radBot = 6.85;
+        var height = 0.5;
+        var radSeg = 24;
+        const geometry = new THREE.CylinderGeometry(radTop, radBot, height, radSeg);
+
+        const loader = new THREE.TextureLoader();
+        var material = new THREE.MeshPhongMaterial( { map: loader.load('images/floor.jpg'), } );
+
+        var cylinder = new THREE.Mesh(geometry, material);
+        scene.add(cylinder);
+
+        cylinder.position.x = x;
+        cylinder.position.y = y;
+        cylinder.position.z = z;
+
+        return cylinder;
+      }
+
+      function makePlatform(x, y, z, scene) {
+        var radTop = 3;
+        var radBot = 3;
+        var height = 1;
+        var radSeg = 24;
+        const geometry = new THREE.CylinderGeometry(radTop, radBot, height, radSeg);
+
+        const loader = new THREE.TextureLoader();
+        var material = new THREE.MeshPhongMaterial( { map: loader.load('images/floor.jpg'), } );
+
+        var cylinder = new THREE.Mesh(geometry, material);
+        scene.add(cylinder);
+
+        cylinder.position.x = x;
+        cylinder.position.y = y;
+        cylinder.position.z = z;
+
+        return cylinder;
+      }
+
+      function makeCylinder(x, y, z, scene) {
+        var radTop = 0.3;
+        var radBot = 0.3;
+        var height = 5.5;
+        var radSeg = 16;
+        const geometry = new THREE.CylinderGeometry(radTop, radBot, height, radSeg);
+
+        const loader = new THREE.TextureLoader();
+        var material = new THREE.MeshPhongMaterial( { map: loader.load('images/floor.jpg'), } );
+
+        var cylinder = new THREE.Mesh(geometry, material);
+        scene.add(cylinder);
+
+        cylinder.position.x = x;
+        cylinder.position.y = y;
+        cylinder.position.z = z;
+
+        return cylinder;
+      }
+
+      
+      function makeOcta(x, y, z, scene) {
+        var radius = 2;
+        var detail = 0;
+        const geometry = new THREE.OctahedronGeometry(radius, detail);
+
+        const loader = new THREE.TextureLoader();
+        var material = new THREE.MeshPhongMaterial( { color: 0x004594 } );
+
+        var octa = new THREE.Mesh(geometry, material);
+        scene.add(octa);
+
+        octa.position.x = x;
+        octa.position.y = y;
+        octa.position.z = z;
+
+        return octa;
+      }
+
+      function makeSphere(x, y, z, scene) {
+        var radius = 2;
+        var widthSeg = 10;
+        var heightSeg = 6;
+        const geometry = new THREE.SphereGeometry(radius, widthSeg, heightSeg);
+
+        const loader = new THREE.TextureLoader();
+        var material = new THREE.MeshPhongMaterial( { color: 0x007a03 } );
+
+        var sphere = new THREE.Mesh(geometry, material);
+        scene.add(sphere);
+
+        sphere.position.x = x;
+        sphere.position.y = y;
+        sphere.position.z = z;
+
+        return sphere;
+      }
+
+      function makeDodecahedron(x, y, z, scene) {
+        var radius = 5.0;
+        var detail = 0;
+        const geometry = new THREE.DodecahedronGeometry(radius, detail);
+
+        const loader = new THREE.TextureLoader();
+        var material = new THREE.MeshPhongMaterial( { color: 0x94008f } );
+
+        var dodecahedron = new THREE.Mesh(geometry, material);
+        scene.add(dodecahedron);
+
+        dodecahedron.position.x = x;
+        dodecahedron.position.y = y;
+        dodecahedron.position.z = z;
+
+        return dodecahedron;
+      }
+
+      function main() {
+        const canvas = document.querySelector('#c');
+        const renderer = new THREE.WebGLRenderer({canvas});
+        var fog_On;
+        var camera_1 = true;
+        var camera_2 = false;
+
+        // Fog Event
+        document.getElementById('fog_On').addEventListener('mousemove', function() { fog_On = this.value; renderFog(); });
+        document.getElementById('camera1').onclick = function() { camera_1 = true; camera_2 = false; renderCamera(); };
+        document.getElementById('camera2').onclick = function() { camera_2 = true; camera_1 = false; };
+
+
+        function renderCamera() {
+
+        }
+        // (Field of view (FOV), aspect ratio, near, far)
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 2, 30000);
+
+        // Camera position
+        camera.position.z = 15;
+
+        const left = window.innerWidth / - 400;
+        const right = window.innerWidth / 40;  // default canvas size
+        const top = window.innerHeight / 40;
+        const bottom = window.innerHeight / - 200;  // default canvas size
+        const near = -15;
+        const far = 100;
+        const camera2 = new THREE.OrthographicCamera(left, right, top, bottom, near, far);
+
+        // Camera 2 position
+        camera2.position.y = 0.5;
+        camera2.position.z = 3;
+
+        // Orbit Controls
+        var controls = new OrbitControls(camera, canvas);
+        controls.target.set(0, 1, -5);
+        controls.minDistance = 1;
+        controls.maxDistance = 40;
+        controls.update();
+
+        var controls2 = new OrbitControls(camera2, canvas);
+        controls2.target.set(0, 0, 0);
+        controls2.minZoom = 0.5;
+        controls2.update();
+
+        const scene = new THREE.Scene();
+
+        // Skybox;
+        createSkyBox(scene, renderer, camera);
+        createSkyBox(scene, renderer, camera2);
+
+        // Fog
+        function renderFog() {
+          const near = 1;
+          const far = fog_On;
+          const color = 'lightblue';
+          scene.fog = new THREE.Fog(color, near, far);
+          scene.background = new THREE.Color(color);
+        }
+          
+        
+        // Background Color and Size of render
+        renderer.setClearColor("rgb(0, 0, 0)");
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild( renderer.domElement );
+
+        // Resize the canvas as window size changes
+        window.addEventListener('resize', () => {
+          renderer.setSize(window.innerWidth, window.innerHeight);
+          camera.aspect = window.innerWidth / window.innerHeight;
+
+          camera.updateProjectionMatrix();
+        });
+
+         // Call lighting function
+        makeLighting(scene);
+
+        // Create 26 cubes
+        var cubes = [
+          makeCube(0, -2, -0.5, scene),
+          makeCube(0, -2, -1.5, scene),
+          makeCube(0, -2, -2.5, scene),
+          makeCube(1, -2, -0.5, scene),
+          makeCube(1, -2, -1.5, scene),
+          makeCube(1, -2, -2.5, scene),
+          makeCube(-1, -2, -0.5, scene),
+          makeCube(-1, -2, -1.5, scene),
+          makeCube(-1, -2, -2.5, scene),
+          makeCube(-1, -2, -3.5, scene),
+          makeCube(-0, -2, -3.5, scene),
+          makeCube(1, -2, -3.5, scene),
+          makeCube(-1.4, -2, -16, scene),
+          makeCube(1.4, -2, -16, scene),
+          makeCube(6.5, -2, -9, scene),
+          makeCube(6.5, -2, -10, scene),
+          makeCube(7.5, -2, -9, scene),
+          makeCube(7.5, -2, -10, scene),
+          makeCube(8.5, -2, -9, scene),
+          makeCube(8.5, -2, -10, scene),
+          makeCube(-6.5, -2, -9, scene),
+          makeCube(-6.5, -2, -10, scene),
+          makeCube(-7.5, -2, -9, scene),
+          makeCube(-7.5, -2, -10, scene),
+          makeCube(-8.5, -2, -9, scene),
+          makeCube(-8.5, -2, -10, scene),
+        ];
+
+        // floor, ceiling and platforms
+        var floor = makeFloor(0, -2, -9.85, scene);
+        var celing = makeCeiling(0, 3.5, -9.85, scene);
+        var platform = [
+          makePlatform(-12, -2, -10, scene),
+          makePlatform(12, -2, -10, scene),
+        ];
+
+        // cylinders
+        var cylinders = [
+          makeCylinder(-1.3, 0.5, -15.7, scene),
+          makeCylinder(1.3, 0.5, -15.7, scene),
+          makeCylinder(-4, 0.5, -14, scene),
+          makeCylinder(4, 0.5, -14, scene),
+          makeCylinder(-1.2, 0.5, -3.5, scene),
+          makeCylinder(1.2, 0.5, -3.5, scene),
+        ];
+
+        // Octahedron
+        var octa = makeOcta(-12, 1, -10, scene);
+        var octas = [];
+        octas.push(octa);  // add to our list to rotate
+
+        // Sphere
+        var sphere = makeSphere(12, 1, -10, scene);
+        var spheres = [];
+        spheres.push(sphere);  // add to our list to rotate
+
+        // Torus Knot
+        var dodecahedron = makeDodecahedron(0, 10, -10, scene);
+        var dodecahedrons = [];
+        dodecahedrons.push(dodecahedron);  // add to our list to rotate
+      
+        // Render .obj file
+        const objLoader = new OBJLoader2();
+        objLoader.load("statue.obj", function (obj) {
+          obj.scale.setScalar(0.025);
+          obj.translateZ(-15);
+          obj.translateY(0.5);
+          scene.add(obj);
+        });
+
+
+        function resizeRendererToDisplaySize(renderer) {
+          const canvas = renderer.domElement;
+          const width = canvas.clientWidth;
+          const height = canvas.clientHeight;
+          const needResize = canvas.width !== width || canvas.height !== height;
+          if (needResize) {
+            renderer.setSize(width, height, false);
+          }
+          return needResize;
+        }
+
+        function render(time) {
+          time *= 0.001;
+
+          if (resizeRendererToDisplaySize(renderer)) {
+            const canvas = renderer.domElement;
+            camera.aspect = canvas.clientWidth / canvas.clientHeight;
+            camera2.updateProjectionMatrix();
+            camera.updateProjectionMatrix();
+          }
+
+          octas.forEach((octa, ndx) => {
+            const speed = .2 + ndx * .1;
+            const rot = time * speed;
+            octa.rotation.x = rot;
+            octa.rotation.y = rot;
+          });
+
+          spheres.forEach((sphere, ndx) => {
+            const speed = .2 + ndx * .1;
+            const rot = time * speed;
+            sphere.rotation.x = rot;
+            sphere.rotation.y = rot;
+          });
+
+          dodecahedrons.forEach((dodecahedron, ndx) => {
+            const speed = .2 + ndx * .1;
+            const rot = time * speed;
+            dodecahedron.rotation.x = rot;
+            dodecahedron.rotation.y = rot;
+          });
+
+          if (camera_1 == true) {
+            renderer.render(scene, camera);
+          } else {
+            renderer.render(scene, camera2);
+          }
+          
+
+          requestAnimationFrame(render);
+        }
+
+        requestAnimationFrame(render);
+      }
+
+      main();
+    </script>
+  </body>
+</html>
